@@ -18,6 +18,8 @@
 #include "ModulesApp.h"
 #include "MooseSyntax.h"
 
+#include "OpenPronghornLinearFVTurbulencePhysics.h"
+
 #include "OpenPronghornRevision.h"
 
 InputParameters
@@ -43,7 +45,11 @@ OpenPronghornApp::registerAll(Factory & f, ActionFactory & af, Syntax & syntax)
   Registry::registerObjectsTo(f, {"OpenPronghornApp"});
   Registry::registerActionsTo(af, {"OpenPronghornApp"});
 
-  /* register custom execute flags, action syntax, etc. here */
+  syntax.replaceActionSyntax("OpenPronghornLinearFVTurbulencePhysics",
+                             "Physics/NavierStokes/TurbulenceSegregated/*",
+                             "",
+                             __FILE__,
+                             __LINE__);
 }
 
 void
