@@ -1,12 +1,14 @@
 ### Thermophysical Properties ###
-mu = 1.0e-4
+mu = 5e-4
 rho = 1.0
-omega = -0.00994
+omega_vel = 0.010016 #factor correcting vel bc at the top due to centroid difference with wall
+omega = -0.01
+
 #walls = 'left top right bottom'
 
 [GlobalParams]
   rhie_chow_user_object = 'ins_rhie_chow_interpolator'
-  advected_interp_method = 'upwind'
+  # advected_interp_method = 'upwind'
   u = vel_x
   v = vel_y
 []
@@ -14,9 +16,9 @@ omega = -0.00994
 [Mesh]
   [./ccmg]
     type = ConcentricCircleMeshGenerator
-    num_sectors = 120
-    radii = '0.35 1'
-    rings = '1 80'
+    num_sectors = 300
+    radii = '0.35 1.0'
+    rings = '1 100'
     has_outer_square = off
     preserve_volumes = off
     smoothing_max_it = 3
@@ -35,7 +37,7 @@ omega = -0.00994
   []
   # [file_mesh]
   #   type = FileMeshGenerator
-  #   file = taylor_couette_2d_abs_out_visc.e
+  #   file = taylor_couette_2d_rel_out.e
   #   use_for_exodus_restart = true
   # []
 []
@@ -43,6 +45,12 @@ omega = -0.00994
 [Problem]
   linear_sys_names = 'u_system v_system pressure_system'
   previous_nl_solution_required = true
+[]
+
+[FVInterpolationMethods]
+  [average]
+    type = FVGeometricAverage
+  []
 []
 
 [UserObjects]
@@ -53,7 +61,7 @@ omega = -0.00994
     pressure = pressure
     rho = ${rho}
     p_diffusion_kernel = p_diffusion
-    #body_force_kernel_names = "u_omega; v_omega"
+    pressure_projection_method = consistent
   []
 []
 
@@ -85,6 +93,12 @@ omega = -0.00994
   [wr_1]
     type = MooseLinearVariableFVReal
   []
+  [vel_abs_x]
+    type = MooseLinearVariableFVReal
+  []
+  [vel_abs_y]
+    type = MooseLinearVariableFVReal
+  []
 []
 
 [AuxKernels]
@@ -92,14 +106,30 @@ omega = -0.00994
     type = ParsedAux
     variable = wr_0
     use_xyzt = true
-    expression = '-y * ${omega}'
+    expression = '-y * ${omega_vel}' #wxr=(-wy,wx,0)
     execute_on = 'INITIAL NONLINEAR'
   []
   [wr_1]
     type = ParsedAux
     variable = wr_1
     use_xyzt = true
-    expression = 'x * ${omega}'
+    expression = 'x * ${omega_vel}'
+    execute_on = 'INITIAL NONLINEAR'
+  []
+  [vel_abs_x]
+    type = ParsedAux
+    variable = vel_abs_x
+    use_xyzt = true
+    coupled_variables = 'vel_x'
+    expression = 'vel_x - y * ${omega}' #v_abs=v_rel+wxr -->
+    execute_on = 'INITIAL NONLINEAR'
+  []
+  [vel_abs_y]
+    type = ParsedAux
+    variable = vel_abs_y
+    use_xyzt = true
+    coupled_variables = 'vel_y'
+    expression = 'vel_y + x * ${omega}'
     execute_on = 'INITIAL NONLINEAR'
   []
 []
@@ -115,13 +145,25 @@ omega = -0.00994
     variable = vel_x
     mu = ${mu}
     momentum_component = 'x'
-    use_nonorthogonal_correction = true
+    use_nonorthogonal_correction = false #true
+    advected_interp_method_name = average
   []
   [u_pressure]
     type = LinearFVMomentumPressure
     variable = vel_x
     pressure = pressure
     momentum_component = 'x'
+  []
+  [u_srfacccel]
+    type = LinearFVSRFAccelerations
+    variable = vel_x
+    omega_brf = omega_brf
+    omega_dot_brf = omega_dot_brf
+    r_mc = r_mc
+    momentum_component = 'x'
+    rho = ${rho}
+    u = vel_x
+    v = vel_y
   []
 
   # [v_time]
@@ -134,7 +176,8 @@ omega = -0.00994
     variable = vel_y
     mu = ${mu}
     momentum_component = 'y'
-    use_nonorthogonal_correction = true
+    use_nonorthogonal_correction = false #true
+    advected_interp_method_name = average
   []
   [v_pressure]
     type = LinearFVMomentumPressure
@@ -142,12 +185,23 @@ omega = -0.00994
     pressure = pressure
     momentum_component = 'y'
   []
+  [v_srfacccel]
+    type = LinearFVSRFAccelerations
+    variable = vel_y
+    omega_brf = omega_brf
+    omega_dot_brf = omega_dot_brf
+    r_mc = r_mc
+    momentum_component = 'y'
+    rho = ${rho}
+    u = vel_x
+    v = vel_y
+  []
 
   [p_diffusion]
-    type = LinearFVAnisotropicDiffusion
+    type = LinearFVPressureCorrectionDiffusion
     variable = pressure
     diffusion_tensor = Ainv
-    use_nonorthogonal_correction = true
+    use_nonorthogonal_correction = false #true
   []
   [HbyA_divergence]
     type = LinearFVDivergence
@@ -162,31 +216,31 @@ omega = -0.00994
     type = LinearFVAdvectionDiffusionFunctorDirichletBC
     variable = vel_x
     boundary = 'inner'
-    functor = wr_0 #'wy_'
+    functor = 0
   []
   [inner-v]
     type = LinearFVAdvectionDiffusionFunctorDirichletBC
     variable = vel_y
     boundary = 'inner'
-    functor = wr_1 #'wx_'
+    functor = 0
   []
   [outer-u]
     type = LinearFVAdvectionDiffusionFunctorDirichletBC
     variable = vel_x
     boundary = 'outer'
-    functor = 0
+    functor = 'wr_0'
   []
   [outer-v]
     type = LinearFVAdvectionDiffusionFunctorDirichletBC
     variable = vel_y
     boundary = 'outer'
-    functor = 0
+    functor = 'wr_1'
   []
 
   # [pressure]
   #   type = LinearFVAdvectionDiffusionExtrapolatedBC
   #   variable = pressure
-  #   boundary = 'top bottom left right'
+  #   boundary = 'inner outer'
   #   use_two_term_expansion = false
   # []
   [pressure]
@@ -202,6 +256,25 @@ omega = -0.00994
 []
 
 [FunctorMaterials]
+  [SRF_Functor_Material]
+    type = LinearFVSRFFunctorMaterial
+    mc_origin = '0. 0. 0.'
+    SRF_input_mode = 'fixed'
+    pitch_angle_fixed = 0.0
+    roll_angle_fixed = 0.0
+    yaw_angle_fixed = 0.0
+    pitch_omega_fixed = 0.0
+    roll_omega_fixed = 0.0
+    yaw_omega_fixed = ${omega}
+  []
+[]
+
+[VectorPostprocessors]
+  [centroid_profile]
+    type = ElementValueSampler
+    variable = 'vel_abs_x vel_abs_y pressure'
+    sort_by = id
+  []
 []
 
 ################################################################################
@@ -209,21 +282,39 @@ omega = -0.00994
 ################################################################################
 
 [Executioner]
+  # type = PIMPLE
+  # momentum_l_abs_tol = 1e-11
+  # pressure_l_abs_tol = 1e-11
+  # momentum_l_tol = 0
+  # pressure_l_tol = 0
+  # rhie_chow_user_object = 'ins_rhie_chow_interpolator'
+  # momentum_systems = 'u_system v_system'
+  # pressure_system = 'pressure_system'
+  # momentum_equation_relaxation = 0.7
+  # pressure_variable_relaxation = 0.3
+  # num_iterations = 6
+  # dt = 15
+  # num_steps = 2000
+  # pressure_absolute_tolerance = 1e-8
+  # momentum_absolute_tolerance = 1e-8
+  # print_fields = false
+  # momentum_l_max_its = 300
+
   type = SIMPLE
-  momentum_l_abs_tol = 1e-14 #1e-11
-  pressure_l_abs_tol = 1e-14#1e-11
-  momentum_l_tol = 1e-14#0
-  pressure_l_tol = 1e-14#0
+  momentum_l_abs_tol = 1e-14
+  pressure_l_abs_tol = 1e-14
+  momentum_l_tol = 0
+  pressure_l_tol = 0
   rhie_chow_user_object = 'ins_rhie_chow_interpolator'
   momentum_systems = 'u_system v_system'
   pressure_system = 'pressure_system'
-  momentum_equation_relaxation = 0.8
-  pressure_variable_relaxation = 0.3
-  num_iterations = 10000 #6
+  momentum_equation_relaxation = 0.999
+  pressure_variable_relaxation = 1.0
+  num_iterations = 15000 #6
   #dt = 15
   #num_steps = 2000
-  pressure_absolute_tolerance = 1e-12
-  momentum_absolute_tolerance = 1e-12
+  pressure_absolute_tolerance = 1e-8
+  momentum_absolute_tolerance = 1e-8
   print_fields = false
   momentum_l_max_its = 300
 
@@ -246,7 +337,7 @@ omega = -0.00994
 ################################################################################
 
 [Outputs]
-  [out_visc]
-    type = Exodus
-  []
+  file_base = 'taylor_couette_2d_rel_out'
+  csv = true
+  exodus = true
 []

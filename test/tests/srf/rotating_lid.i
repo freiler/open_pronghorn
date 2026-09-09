@@ -1,19 +1,27 @@
-### Thermophysical Properties ###
+# Fixed-angular-velocity SRF equilibrium.
+#
+# For omega = (0, 0, w), mc_origin = (0, 0, 0), and zero relative
+# velocity, the centrifugal acceleration is
+#
+#   -omega x (omega x r) = w^2 (x, y, 0).
+#
+# The steady analytical solution used by the error postprocessors is
+#
+#   u = 0,
+#   v = 0,
+#   p = 0.5 * rho * w^2 * (x^2 + y^2),
+#
+# where the pressure constant is selected by pinning p(0, 0) = 0.
+
 mu = 1.0
 rho = 1.0
-
-### Operation Conditions ###
-# lid_velocity = 1.0
 side_length = 1.0
-
-#walls = 'left top right bottom'
-
 w = 1.0
 
-
-[GlobalParams]
-  #rhie_chow_user_object = 'rc'
-  advected_interp_method = 'upwind'
+[FVInterpolationMethods]
+  [average]
+    type = FVGeometricAverage
+  []
 []
 
 [Mesh]
@@ -24,10 +32,11 @@ w = 1.0
     xmax = ${fparse side_length}
     ymin = ${fparse -side_length}
     ymax = ${fparse side_length}
-    nx = 80
-    ny = 80
+    # mms.run_spatial uniformly refines this 2 x 2 base mesh.
+    nx = 2
+    ny = 2
   []
-  # Prevent test diffing on distributed parallel element numbering
+  # Prevent test diffing on distributed parallel element numbering.
   allow_renumbering = false
 []
 
@@ -44,7 +53,6 @@ w = 1.0
     pressure = pressure
     rho = ${rho}
     p_diffusion_kernel = p_diffusion
-    # body_force_kernel_names = "u_omega; v_omega"
   []
 []
 
@@ -56,7 +64,7 @@ w = 1.0
   []
   [vel_y]
     type = MooseLinearVariableFVReal
-    initial_condition = 0
+    initial_condition = 0.0
     solver_sys = v_system
   []
   [pressure]
@@ -73,21 +81,28 @@ w = 1.0
     mu = ${mu}
     u = vel_x
     v = vel_y
-    momentum_component = 'x'
-    rhie_chow_user_object = 'rc'
+    momentum_component = x
+    rhie_chow_user_object = rc
     use_nonorthogonal_correction = false
-    use_deviatoric_terms = yes
+    use_deviatoric_terms = true
+    advected_interp_method_name = average
   []
   [u_pressure]
     type = LinearFVMomentumPressure
     variable = vel_x
     pressure = pressure
-    momentum_component = 'x'
+    momentum_component = x
   []
   [u_omega]
-    type = LinearFVSource
+    type = LinearFVSRFAccelerations
     variable = vel_x
-    source_density = x_accel
+    momentum_component = x
+    rho = ${rho}
+    u = vel_x
+    v = vel_y
+    omega_brf = omega_brf
+    omega_dot_brf = omega_dot_brf
+    r_mc = r_mc
   []
 
   [v_advection_stress]
@@ -96,25 +111,32 @@ w = 1.0
     mu = ${mu}
     u = vel_x
     v = vel_y
-    momentum_component = 'y'
-    rhie_chow_user_object = 'rc'
+    momentum_component = y
+    rhie_chow_user_object = rc
     use_nonorthogonal_correction = false
-    use_deviatoric_terms = yes
+    use_deviatoric_terms = true
+    advected_interp_method_name = average
   []
   [v_pressure]
     type = LinearFVMomentumPressure
     variable = vel_y
     pressure = pressure
-    momentum_component = 'y'
+    momentum_component = y
   []
   [v_omega]
-    type = LinearFVSource
+    type = LinearFVSRFAccelerations
     variable = vel_y
-    source_density = y_accel
+    momentum_component = y
+    rho = ${rho}
+    u = vel_x
+    v = vel_y
+    omega_brf = omega_brf
+    omega_dot_brf = omega_dot_brf
+    r_mc = r_mc
   []
 
   [p_diffusion]
-    type = LinearFVAnisotropicDiffusion
+    type = LinearFVPressureCorrectionDiffusion
     variable = pressure
     diffusion_tensor = Ainv
     use_nonorthogonal_correction = false
@@ -137,18 +159,12 @@ w = 1.0
   [no_slip_y]
     type = LinearFVAdvectionDiffusionFunctorDirichletBC
     variable = vel_y
-    boundary = 'left right top bottom'
+    boundary = 'left right bottom top'
     functor = 0
   []
-  # [pressure-extrapolation]
-  #   type = LinearFVExtrapolatedPressureBC
-  #   boundary = 'left right top bottom'
-  #   variable = pressure
-  #   use_two_term_expansion = true
-  # []
   [pressure]
     type = LinearFVPressureFluxBC
-    boundary = 'top bottom left right'
+    boundary = 'left right bottom top'
     variable = pressure
     HbyA_flux = HbyA
     Ainv = Ainv
@@ -158,31 +174,49 @@ w = 1.0
   []
 []
 
-[AuxVariables]
-[]
-
-[AuxKernels]
+[Functions]
+  [exact_u]
+    type = ParsedFunction
+    expression = '0'
+  []
+  [exact_v]
+    type = ParsedFunction
+    expression = '0'
+  []
+  [exact_p]
+    type = ParsedFunction
+    expression = '0.5*rho*w^2*(x^2+y^2)'
+    symbol_names = 'rho w'
+    symbol_values = '${rho} ${w}'
+  []
 []
 
 [FunctorMaterials]
-  [x_acceleration]
-    type = ParsedFunctorMaterial
-    expression = '${w}*${w}*x'
-    property_name = 'x_accel'
-  []
-  [y_acceleration]
-    type = ParsedFunctorMaterial
-    expression = '${w}*${w}*y'
-    property_name = 'y_accel'
+  [srf_motion]
+    type = LinearFVSRFFunctorMaterial
+    mc_origin = '0 0 0'
+    SRF_input_mode = fixed
+
+    pitch_angle_fixed = 0
+    yaw_angle_fixed = 0
+    roll_angle_fixed = 0
+
+    pitch_omega_fixed = 0
+    yaw_omega_fixed = ${w}
+    roll_omega_fixed = 0
+
+    pitch_omegadot_fixed = 0
+    yaw_omegadot_fixed = 0
+    roll_omegadot_fixed = 0
   []
 []
 
 [Executioner]
   type = SIMPLE
 
-  rhie_chow_user_object = 'rc'
+  rhie_chow_user_object = rc
   momentum_systems = 'u_system v_system'
-  pressure_system = 'pressure_system'
+  pressure_system = pressure_system
 
   momentum_l_abs_tol = 1e-14
   pressure_l_abs_tol = 1e-14
@@ -194,6 +228,7 @@ w = 1.0
   num_iterations = 1000
   pressure_absolute_tolerance = 1e-12
   momentum_absolute_tolerance = 1e-12
+
   momentum_petsc_options_iname = '-pc_type -pc_hypre_type'
   momentum_petsc_options_value = 'hypre boomeramg'
   pressure_petsc_options_iname = '-pc_type -pc_hypre_type'
@@ -205,15 +240,40 @@ w = 1.0
   pin_pressure = true
   pressure_pin_value = 0.0
   pressure_pin_point = '0.0 0.0 0.0'
+
+  # Accurately integrate the squared quadratic pressure error.
+  [Quadrature]
+    type = GAUSS
+    order = FOURTH
+  []
+[]
+
+[Postprocessors]
+  [h]
+    type = AverageElementSize
+    outputs = csv
+  []
+  [L2u]
+    type = ElementL2FunctorError
+    approximate = vel_x
+    exact = exact_u
+    outputs = csv
+  []
+  [L2v]
+    type = ElementL2FunctorError
+    approximate = vel_y
+    exact = exact_v
+    outputs = csv
+  []
+  [L2p]
+    type = ElementL2FunctorError
+    approximate = pressure
+    exact = exact_p
+    outputs = csv
+  []
 []
 
 [Outputs]
   csv = true
-  exodus = true
-  perf_graph = false
-  print_nonlinear_residuals = false
-  print_linear_residuals = true
 []
 
-[VectorPostprocessors]
-[]
