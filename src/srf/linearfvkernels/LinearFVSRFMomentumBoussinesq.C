@@ -35,9 +35,15 @@ LinearFVSRFMomentumBoussinesq::validParams()
   //     "momentum_component",
   //     momentum_component,
   //     "The component of the momentum equation that this kernel applies to.");
-  params.addRequiredParam<MooseFunctorName>("pitch_angle", "The pitch angle of rotation between the metacenter and the body reference frame.");
-  params.addRequiredParam<MooseFunctorName>("yaw_angle", "The yaw angle of rotation between the metacenter and the body reference frame.");
-  params.addRequiredParam<MooseFunctorName>("roll_angle", "The roll angle of rotation between the metacenter and the body reference frame.");
+  params.addRequiredParam<MooseFunctorName>(
+      "pitch_angle",
+      "The pitch angle of rotation between the metacenter and the body reference frame.");
+  params.addRequiredParam<MooseFunctorName>(
+      "yaw_angle",
+      "The yaw angle of rotation between the metacenter and the body reference frame.");
+  params.addRequiredParam<MooseFunctorName>(
+      "roll_angle",
+      "The roll angle of rotation between the metacenter and the body reference frame.");
   return params;
 }
 
@@ -61,8 +67,8 @@ LinearFVSRFMomentumBoussinesq::computeRightHandSideContribution()
   const auto elem = makeElemArg(_current_elem_info->elem());
   const auto state = determineState();
 
-  const RealVectorValue gravity_brf = NS::SRF::rotateVectorInertialToBody(_gravity,
-                                           _pitch_angle(elem,state), _yaw_angle(elem,state), _roll_angle(elem,state));
+  const RealVectorValue gravity_brf = NS::SRF::rotateVectorInertialToBody(
+      _gravity, _pitch_angle(elem, state), _yaw_angle(elem, state), _roll_angle(elem, state));
 
   return -_alpha(elem, state) * gravity_brf(_index) * _rho(elem, state) *
          (_temperature_var.getElemValue(*_current_elem_info, state) - _ref_temperature) *

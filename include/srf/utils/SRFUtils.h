@@ -14,22 +14,20 @@
 
 namespace NS
 {
-  namespace SRF
-  {
+namespace SRF
+{
 
-    using libMesh::RealVectorValue;
+using libMesh::RealVectorValue;
 
-    RealVectorValue
-    rotateVectorInertialToBody(const RealVectorValue & v_inertial,
-                              const Real & pitch,
-                              const Real & yaw,
-                              const Real & roll);
+RealVectorValue rotateVectorInertialToBody(const RealVectorValue & v_inertial,
+                                           const Real & pitch,
+                                           const Real & yaw,
+                                           const Real & roll);
 
-    RealVectorValue
-    rotateVectorBodyToInertial(const RealVectorValue & v_body,
-                              const Real & pitch,
-                              const Real & yaw,
-                              const Real & roll);
+RealVectorValue rotateVectorBodyToInertial(const RealVectorValue & v_body,
+                                           const Real & pitch,
+                                           const Real & yaw,
+                                           const Real & roll);
 
-  }
+}
 }

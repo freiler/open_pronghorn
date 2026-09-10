@@ -26,8 +26,7 @@ LinearFVSRFMomentumHeave::validParams()
   params.addRequiredParam<MooseFunctorName>(
       "heave_amp", "Heave displacement amplitude in the selected body-frame direction [m].");
   params.addRequiredParam<MooseFunctorName>("heave_per", "Heave period [s].");
-  params.addParam<MooseFunctorName>(
-      "heave_pha", 0.0, "Heave displacement phase shift [degrees].");
+  params.addParam<MooseFunctorName>("heave_pha", 0.0, "Heave displacement phase shift [degrees].");
 
   params.addRequiredParam<MooseFunctorName>(NS::density, "Fluid density [kg/m^3].");
 

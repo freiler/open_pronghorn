@@ -11,7 +11,6 @@
 
 #include "LinearFVMomentumBoussinesq.h"
 
-
 /**
  * Kernel that adds contributions from a external source term discretized using the finite volume
  * method to a linear system.
@@ -38,5 +37,4 @@ protected:
   const Moose::Functor<Real> & _yaw_angle;
   // Roll angle
   const Moose::Functor<Real> & _roll_angle;
-
 };

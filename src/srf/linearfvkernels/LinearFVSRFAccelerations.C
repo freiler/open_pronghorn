@@ -19,16 +19,21 @@ InputParameters
 LinearFVSRFAccelerations::validParams()
 {
   InputParameters params = LinearFVElementalKernel::validParams();
-  params.addClassDescription(
-      "Represents the accelerations on the body reference frame "
-      "from the metacenter reference frame motion.");
+  params.addClassDescription("Represents the accelerations on the body reference frame "
+                             "from the metacenter reference frame motion.");
 
   params.addRequiredParam<MooseFunctorName>(NS::density, "Density");
-  params.addRequiredParam<MooseFunctorName>("omega_brf", "The angular velocity in the body reference frame.");
-  params.addRequiredParam<MooseFunctorName>("omega_dot_brf", "The angular acceleration in the body reference frame.");
-  params.addRequiredParam<MooseFunctorName>("r_mc", "Vector Coordinates of the metacenter reference frame w.r.t the body origin.");
+  params.addRequiredParam<MooseFunctorName>("omega_brf",
+                                            "The angular velocity in the body reference frame.");
+  params.addRequiredParam<MooseFunctorName>(
+      "omega_dot_brf", "The angular acceleration in the body reference frame.");
+  params.addRequiredParam<MooseFunctorName>(
+      "r_mc", "Vector Coordinates of the metacenter reference frame w.r.t the body origin.");
   MooseEnum momentum_component("x=0 y=1 z=2");
-  params.addRequiredParam<MooseEnum>("momentum_component",momentum_component,"The component in the body reference frame of the momentum equation that this kernel applies to.");
+  params.addRequiredParam<MooseEnum>("momentum_component",
+                                     momentum_component,
+                                     "The component in the body reference frame of the momentum "
+                                     "equation that this kernel applies to.");
 
   params.addRequiredParam<SolverVariableName>("u", "The velocity in the x direction.");
   params.addRequiredParam<SolverVariableName>("v", "The velocity in the y direction.");
@@ -49,7 +54,8 @@ LinearFVSRFAccelerations::LinearFVSRFAccelerations(const InputParameters & param
         &_fe_problem.getVariable(_tid, getParam<SolverVariableName>("v")))),
     _w_var(params.isParamValid("w")
                ? dynamic_cast<const MooseLinearVariableFVReal *>(
-                     &_fe_problem.getVariable(_tid, getParam<SolverVariableName>("w"))): nullptr)
+                     &_fe_problem.getVariable(_tid, getParam<SolverVariableName>("w")))
+               : nullptr)
 {
 }
 
@@ -81,5 +87,6 @@ LinearFVSRFAccelerations::computeRightHandSideContribution()
 
   const RealVectorValue coriolis = 2.0 * omega.cross(vel);
 
-  return -rho * (omega_x_omega_x_r(_index) + omega_dot_x_r(_index) + coriolis(_index)) * _current_elem_volume;
+  return -rho * (omega_x_omega_x_r(_index) + omega_dot_x_r(_index) + coriolis(_index)) *
+         _current_elem_volume;
 }
