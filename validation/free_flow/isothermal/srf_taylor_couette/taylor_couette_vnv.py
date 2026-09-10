@@ -64,9 +64,7 @@ class TestCase(ValidationCase):
             raise RuntimeError("No element centroids with x > 0 were found")
 
         positive_indices = np.where(positive_x)[0]
-        target_index = positive_indices[
-            np.argmin(np.abs(theta_all[positive_indices]))
-        ]
+        target_index = positive_indices[np.argmin(np.abs(theta_all[positive_indices]))]
         theta_target = theta_all[target_index]
 
         angle_difference = np.arctan2(
@@ -95,9 +93,7 @@ class TestCase(ValidationCase):
             )
 
         profile["r"] = np.hypot(profile["x"], profile["y"])
-        profile["theta_deg"] = np.degrees(
-            np.arctan2(profile["y"], profile["x"])
-        )
+        profile["theta_deg"] = np.degrees(np.arctan2(profile["y"], profile["x"]))
         profile = profile.sort_values("r").reset_index(drop=True)
 
         self.radius = profile["r"].to_numpy(dtype=float)
@@ -132,13 +128,11 @@ class TestCase(ValidationCase):
         )
 
         self.pressure_numerical_shifted = (
-            self.pressure_numerical
-            - self.pressure_numerical[pressure_reference_index]
+            self.pressure_numerical - self.pressure_numerical[pressure_reference_index]
         )
 
         self.pressure_analytical_shifted = (
-            pressure_analytical_raw
-            - pressure_analytical_raw[pressure_reference_index]
+            pressure_analytical_raw - pressure_analytical_raw[pressure_reference_index]
         )
 
         # ------------------------------------------------------------------
@@ -151,9 +145,7 @@ class TestCase(ValidationCase):
         if wall_speed == 0.0:
             raise RuntimeError("Taylor-Couette wall-speed normalization is zero")
 
-        self.u_theta_error = np.abs(
-            self.u_theta_numerical - self.u_theta_analytical
-        )
+        self.u_theta_error = np.abs(self.u_theta_numerical - self.u_theta_analytical)
 
         self.u_theta_error_normalized = self.u_theta_error / wall_speed
 
@@ -161,45 +153,30 @@ class TestCase(ValidationCase):
         self.u_r_normalized = np.abs(self.u_r_numerical) / wall_speed
 
         self.pressure_error = np.abs(
-            self.pressure_numerical_shifted
-            - self.pressure_analytical_shifted
+            self.pressure_numerical_shifted - self.pressure_analytical_shifted
         )
 
-        pressure_span = (
-            np.max(self.pressure_analytical_shifted)
-            - np.min(self.pressure_analytical_shifted)
+        pressure_span = np.max(self.pressure_analytical_shifted) - np.min(
+            self.pressure_analytical_shifted
         )
 
         if pressure_span == 0.0:
-            raise RuntimeError(
-                "Taylor-Couette analytical pressure span is zero"
-            )
+            raise RuntimeError("Taylor-Couette analytical pressure span is zero")
 
-        self.pressure_error_normalized = (
-            self.pressure_error / pressure_span
-        )
+        self.pressure_error_normalized = self.pressure_error / pressure_span
 
         lower_bound = float(self.getParam("validation_lower_bound"))
         upper_bound = float(self.getParam("validation_upper_bound"))
-        pressure_upper_bound = float(
-            self.getParam("pressure_validation_upper_bound")
-        )
+        pressure_upper_bound = float(self.getParam("pressure_validation_upper_bound"))
 
-        self.min_error = (
-            lower_bound * np.ones_like(self.u_theta_error_normalized)
-        )
+        self.min_error = lower_bound * np.ones_like(self.u_theta_error_normalized)
 
-        self.max_error = (
-            upper_bound * np.ones_like(self.u_theta_error_normalized)
-        )
+        self.max_error = upper_bound * np.ones_like(self.u_theta_error_normalized)
 
-        self.pressure_min_error = np.zeros_like(
+        self.pressure_min_error = np.zeros_like(self.pressure_error_normalized)
+
+        self.pressure_max_error = pressure_upper_bound * np.ones_like(
             self.pressure_error_normalized
-        )
-
-        self.pressure_max_error = (
-            pressure_upper_bound
-            * np.ones_like(self.pressure_error_normalized)
         )
 
         # ------------------------------------------------------------------
@@ -232,8 +209,7 @@ class TestCase(ValidationCase):
         )
 
         print(
-            "Taylor-Couette centroid-row angle: "
-            f"{np.degrees(theta_target):.12e} deg"
+            "Taylor-Couette centroid-row angle: " f"{np.degrees(theta_target):.12e} deg"
         )
 
         print(
@@ -262,15 +238,11 @@ class TestCase(ValidationCase):
         denominator = cls.RO**2 - cls.RI**2
 
         coefficient_a = (
-            cls.OMEGA_O * cls.RO**2
-            - cls.OMEGA_I * cls.RI**2
+            cls.OMEGA_O * cls.RO**2 - cls.OMEGA_I * cls.RI**2
         ) / denominator
 
         coefficient_b = (
-            cls.RI**2
-            * cls.RO**2
-            * (cls.OMEGA_I - cls.OMEGA_O)
-            / denominator
+            cls.RI**2 * cls.RO**2 * (cls.OMEGA_I - cls.OMEGA_O) / denominator
         )
 
         return coefficient_a, coefficient_b
@@ -280,10 +252,7 @@ class TestCase(ValidationCase):
         """Steady laminar Taylor-Couette tangential velocity."""
         coefficient_a, coefficient_b = cls._velocity_coefficients()
 
-        return (
-            coefficient_a * radius
-            + coefficient_b / radius
-        )
+        return coefficient_a * radius + coefficient_b / radius
 
     @classmethod
     def _pressure_solution(cls, radius):
@@ -328,9 +297,7 @@ class TestCase(ValidationCase):
             if candidates:
                 return candidates[-1]
 
-        raise RuntimeError(
-            "Could not find the Taylor-Couette centroid-profile CSV"
-        )
+        raise RuntimeError("Could not find the Taylor-Couette centroid-profile CSV")
 
     @staticmethod
     def validParams():

@@ -15,7 +15,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-
 # Taylor-Couette benchmark parameters
 RI = 0.35
 RO = 1.0
@@ -26,10 +25,9 @@ PRESSURE_REFERENCE_RADIUS = 0.75
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 DEFAULT_CSV_FILE = (
-    SCRIPT_DIR
-    / "../../../../../../../validation/free_flow/isothermal/"
-      "srf_taylor_couette/"
-      "taylor_couette_2d_rel_out_centroid_profile_0001.csv"
+    SCRIPT_DIR / "../../../../../../../validation/free_flow/isothermal/"
+    "srf_taylor_couette/"
+    "taylor_couette_2d_rel_out_centroid_profile_0001.csv"
 ).resolve()
 
 
@@ -69,12 +67,8 @@ def resolve_csv(csv_file):
 def velocity_coefficients():
     """Return A and B for u_theta(r) = A r + B/r."""
     denominator = RO**2 - RI**2
-    coefficient_a = (
-        OMEGA_O * RO**2 - OMEGA_I * RI**2
-    ) / denominator
-    coefficient_b = (
-        RI**2 * RO**2 * (OMEGA_I - OMEGA_O)
-    ) / denominator
+    coefficient_a = (OMEGA_O * RO**2 - OMEGA_I * RI**2) / denominator
+    coefficient_b = (RI**2 * RO**2 * (OMEGA_I - OMEGA_O)) / denominator
     return coefficient_a, coefficient_b
 
 
@@ -111,9 +105,7 @@ def load_radial_profile(csv_file):
         )
 
     numeric_columns = sorted(required_columns)
-    data[numeric_columns] = data[numeric_columns].apply(
-        pd.to_numeric, errors="coerce"
-    )
+    data[numeric_columns] = data[numeric_columns].apply(pd.to_numeric, errors="coerce")
     data = data.dropna(subset=numeric_columns).copy()
     if data.empty:
         raise ValueError(f"{csv_file.name} contains no valid numeric rows")
@@ -127,9 +119,7 @@ def load_radial_profile(csv_file):
 
     theta_all = data["theta"].to_numpy()
     candidate_indices = np.flatnonzero(positive_x)
-    target_index = candidate_indices[
-        np.argmin(np.abs(theta_all[candidate_indices]))
-    ]
+    target_index = candidate_indices[np.argmin(np.abs(theta_all[candidate_indices]))]
     theta_target = theta_all[target_index]
 
     # Use a wrapped angle difference so this also works near +/-pi.
@@ -141,9 +131,7 @@ def load_radial_profile(csv_file):
 
     profile = data.loc[row_mask].copy()
     if len(profile) < 2:
-        raise ValueError(
-            "Could not identify a complete radial centroid row in the CSV"
-        )
+        raise ValueError("Could not identify a complete radial centroid row in the CSV")
 
     # Project Cartesian absolute velocity onto e_theta = (-sin(theta), cos(theta)).
     profile["u_theta"] = (
@@ -177,12 +165,8 @@ def build_comparison(profile):
         "r": radius,
         "u_theta_numerical": u_theta_numerical,
         "u_theta_analytical": u_theta_analytical,
-        "pressure_numerical_shifted": (
-            pressure_numerical - numerical_reference
-        ),
-        "pressure_analytical_shifted": (
-            pressure_analytical - analytical_reference
-        ),
+        "pressure_numerical_shifted": (pressure_numerical - numerical_reference),
+        "pressure_analytical_shifted": (pressure_analytical - analytical_reference),
     }
 
 
@@ -252,10 +236,7 @@ def main():
     pressure_plot = plot_pressure(comparison, output_directory)
 
     velocity_error = np.max(
-        np.abs(
-            comparison["u_theta_numerical"]
-            - comparison["u_theta_analytical"]
-        )
+        np.abs(comparison["u_theta_numerical"] - comparison["u_theta_analytical"])
     )
     print(f"Input CSV: {csv_file}")
     print(f"Selected radial row: {np.degrees(theta_target):.8f} deg")

@@ -2,6 +2,7 @@ import mms
 import unittest
 from mooseutils import fuzzyEqual, fuzzyAbsoluteEqual
 
+
 class TestRotatingLid(unittest.TestCase):
     def test(self):
         velocity_labels = ["L2u", "L2v"]
